@@ -1,3 +1,9 @@
+---
+name: install
+triggers:
+  - "install"
+---
+
 # Install GBrain (Deprecated)
 
 This skill has been replaced by the **setup** skill. See `skills/setup/SKILL.md`.

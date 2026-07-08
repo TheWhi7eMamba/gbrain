@@ -26,6 +26,7 @@ This is the dispatcher. Skills are the implementation. **Read the skill file bef
 | "validate frontmatter", "check frontmatter", "fix frontmatter", "frontmatter audit", "brain lint" | `skills/frontmatter-guard/SKILL.md` |
 | "what search mode", "is my cache hot", "tune my retrieval", "compare search modes", "clear search overrides" | `gbrain search modes/stats/tune` directly. See `skills/conventions/search-modes.md` |
 | "eval results", "search benchmark", "haters-immune methodology", "regression check on retrieval" | `gbrain eval run-all` / `gbrain eval compare`. See `docs/eval/SEARCH_MODE_METHODOLOGY.md` |
+| "optimize skills", "skill optimizer", "skillopt", "tune skill prompts" | `skills/skill-optimizer/SKILL.md` |
 
 ## Content & media ingestion
 
