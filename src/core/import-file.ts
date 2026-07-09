@@ -115,6 +115,21 @@ async function extractFencedChunks(
   startChunkIndex: number,
 ): Promise<ChunkInput[]> {
   const out: ChunkInput[] = [];
+
+  // 2026-07-08 (#lexer-fastpath): do NOT run marked.lexer on pages with no
+  // fence markers at all. marked's block regexes exhibit catastrophic
+  // backtracking on PDF-to-markdown soup (long underscore/pipe/dash runs):
+  // observed 82KB fence-free page → event loop frozen for HOURS, ~40GB of
+  // regex backtracking allocations, Bun panic. The lexer here exists ONLY to
+  // find fenced code blocks, so a page containing neither ``` nor ~~~ can be
+  // skipped outright — behavior-identical (no fences → no code tokens) and
+  // immune to the ReDoS class. Pages WITH fences still go through the lexer;
+  // if a fenced pathological page ever surfaces, replace the lexer with a
+  // line-scanner (open/close fence matching is O(n) by hand).
+  if (!markdown.includes('```') && !markdown.includes('~~~')) {
+    return out;
+  }
+
   let tokens: ReturnType<typeof marked.lexer>;
   try {
     tokens = marked.lexer(markdown);
