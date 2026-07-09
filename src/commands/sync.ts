@@ -2040,6 +2040,10 @@ async function performSyncInner(engine: BrainEngine, opts: SyncOpts): Promise<Sy
   // this as `filesImported` so cron operators can see how much work the
   // aborted run completed before --timeout fired.
   let filesImported = 0;
+  // mem-triage (2026-07-08): per-N-file RSS telemetry under GBRAIN_SYNC_TRACE.
+  // Hunting the ~50GB Bun panic on full-repo syncs; remove once the retention
+  // point is found and fixed.
+  let importTickCount = 0;
   const start = Date.now();
 
   // v0.41.13.0 (T2 + D-V3-1): closure for the partial-return path.
@@ -2529,6 +2533,10 @@ async function performSyncInner(engine: BrainEngine, opts: SyncOpts): Promise<Sy
       }
       progressAt.last = Date.now(); // #1950: forward progress → reset stall watchdog
       progress.tick(1, path);
+      // mem-triage (2026-07-08): RSS curve every 100 files under trace.
+      if (process.env.GBRAIN_SYNC_TRACE && ++importTickCount % 100 === 0) {
+        serr(`[sync-mem] files=${importTickCount} rss=${(process.memoryUsage().rss / 1e9).toFixed(2)}GB heap=${(process.memoryUsage().heapUsed / 1e9).toFixed(2)}GB`);
+      }
       // v0.42.x (#1794): keep the lock-refresh heartbeat alive on big imports.
       await maybeYield();
       // paced-backfill: cooperative DB-contention pace between files (no-op when

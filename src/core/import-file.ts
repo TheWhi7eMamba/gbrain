@@ -501,6 +501,28 @@ export async function importFromContent(
     }
   }
 
+  // 2026-07-08 (#tsvector-guard): Postgres rejects tsvector inputs over
+  // 1,048,575 bytes, so a page whose text exceeds the ceiling can NEVER land —
+  // every import attempt fails inside the transaction ("string is too long for
+  // tsvector"), and that error path leaks ~2.5GB per attempt under Bun (the
+  // driver retains the megabyte-scale params; observed to drive full-repo syncs
+  // to a ~50GB Bun panic on brains with spreadsheet-dump markdown). Skip
+  // BEFORE any DB work, mirroring the MAX_FILE_SIZE guard's semantics: cheap,
+  // deterministic, recorded by the caller's failure ledger. Margin below the
+  // hard cap covers tsvector-input expansion.
+  const TSVECTOR_SAFE_MAX_BYTES = 1_000_000;
+  const bodyBytes =
+    Buffer.byteLength(parsed.compiled_truth ?? '', 'utf8') +
+    Buffer.byteLength(parsed.timeline ?? '', 'utf8');
+  if (bodyBytes > TSVECTOR_SAFE_MAX_BYTES) {
+    return {
+      slug,
+      status: 'skipped',
+      chunks: 0,
+      error: `Body too large for tsvector (${bodyBytes} bytes > ${TSVECTOR_SAFE_MAX_BYTES}); split the file or quarantine it`,
+    };
+  }
+
   // v0.39.3.0 CV8 — DB content_hash excludes timestamp-bearing frontmatter
   // keys so identical body content from `gbrain capture` (which stamps
   // `captured_at` and `ingested_at` per call) produces a stable hash.
