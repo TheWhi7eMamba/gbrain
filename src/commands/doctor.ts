@@ -2466,6 +2466,10 @@ export async function checkStaleLocks(
         breakHint = `gbrain dream --break-lock --source ${s.id.slice('gbrain-cycle:'.length)}`;
       } else if (s.id === 'gbrain-cycle') {
         breakHint = 'gbrain dream --break-lock';
+      } else if (s.id === 'gbrain-sync') {
+        // Legacy pre-v0.40 bare global sync lock — `sync --break-lock` only
+        // targets per-source keys, so the reaper (doctor --fix) is the path.
+        breakHint = 'gbrain doctor --fix';
       }
       return `  ${s.id} (pid ${s.holder_pid} on ${s.holder_host}, age ${ageH}h) → ${breakHint}`;
     });

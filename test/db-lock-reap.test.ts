@@ -87,6 +87,17 @@ describe('reapDeadHolderLocks', () => {
     expect(await lockIds()).toEqual([]);
   });
 
+  test('reaps the legacy bare gbrain-sync id (pre-v0.40 global sync lock)', async () => {
+    // Regression: a bare `gbrain-sync` row stranded by a pre-v0.40-era crash
+    // was un-reapable (namespace filter only matched `gbrain-sync:*`) and
+    // `sync --break-lock` never targets it — it wedged doctor forever.
+    await seedLock('gbrain-sync', 900004, LOCAL, OLD_S, false); // dead, TTL expired
+    const { reaped, reapedIds } = await reapDeadHolderLocks(engine, killSeam(new Set()));
+    expect(reaped).toBe(1);
+    expect(reapedIds).toEqual(['gbrain-sync']);
+    expect(await lockIds()).toEqual([]);
+  });
+
   test('keeps a live same-host holder', async () => {
     await seedLock('gbrain-sync:src-live', process.pid, LOCAL, OLD_S);
     const { reaped } = await reapDeadHolderLocks(engine, killSeam(new Set([process.pid])));

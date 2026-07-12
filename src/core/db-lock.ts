@@ -657,8 +657,8 @@ export async function deleteLockRowExact(
  * sweep. Intended to run at cycle start (and under `gbrain doctor --fix` for
  * no-autopilot brains).
  *
- * Scoped to the `gbrain-sync:*` and `gbrain-cycle`/`gbrain-cycle:*` namespaces
- * ONLY. `gbrain_cycle_locks` is shared by enrich, the minion supervisor,
+ * Scoped to the `gbrain-sync`/`gbrain-sync:*` and `gbrain-cycle`/`gbrain-cycle:*`
+ * namespaces ONLY. `gbrain_cycle_locks` is shared by enrich, the minion supervisor,
  * reindex, schema-pack, and elections (`tryWithDbElection`) — a blanket sweep
  * would change their TTL-failover timing. Those keep their existing
  * on-contention + TTL behavior.
@@ -677,6 +677,13 @@ function isReapableNamespace(lockId: string): boolean {
   return (
     lockId === 'gbrain-cycle' ||
     lockId.startsWith('gbrain-cycle:') ||
+    // Bare `gbrain-sync` is the legacy pre-v0.40 global sync lock id. Nothing
+    // acquires it anymore (performSync now takes `gbrain-sync:<sourceId>`), so
+    // a row stranded by a pre-v0.40-era crash is never reclaimed on contention
+    // and `sync --break-lock` never targets it (it only builds per-source
+    // keys). Without this arm, such a row is un-reapable and wedges doctor's
+    // stale_locks check forever.
+    lockId === 'gbrain-sync' ||
     lockId.startsWith('gbrain-sync:')
   );
 }
